@@ -174,30 +174,23 @@ body{font-family:'Inter',sans-serif;background:var(--dark);color:var(--white);mi
 <div id="join" class="screen">
   <div class="logo">🎮</div>
   <h1>Quiz de Redes Sociales</h1>
-  <p>¿Eres el profe o un equipo que viene a competir?</p>
-
-  <button class="btn btn-ghost" onclick="location.href='/host.html'" style="margin-bottom:16px;">
-    🖥️ Ir al Panel del Profesor
-  </button>
-
-  <div class="divider">o únete como equipo</div>
-
-  <div class="card" id="card-new">
-    <p style="font-size:13px;color:var(--gray);margin-bottom:12px;">Soy el primero de mi equipo (creo la sala)</p>
-    <input class="field" id="inp-tname" placeholder="Nombre del equipo (ej: Los Tiktokers)" maxlength="30"/>
-    <input class="field" id="inp-mname1" placeholder="Tu nombre" maxlength="20"/>
-    <p class="err" id="err1"></p>
-    <button class="btn btn-primary" onclick="createTeam()">Crear equipo</button>
-  </div>
-
-  <div class="divider">ya crearon el equipo</div>
 
   <div class="card">
-    <p style="font-size:13px;color:var(--gray);margin-bottom:12px;">Me uno a un equipo existente</p>
-    <input class="field" id="inp-jtname" placeholder="Nombre exacto del equipo" maxlength="30"/>
+    <p style="font-size:13px;color:var(--gray);margin-bottom:12px;">Selecciona tu equipo e ingresa tu nombre</p>
+    <select class="field" id="inp-jtname">
+      <option value="" disabled selected>— Elige tu equipo —</option>
+      <option>BMW</option>
+      <option>EPIC GAMES</option>
+      <option>NAXOS</option>
+      <option>AVIANCA</option>
+      <option>LA COCINA</option>
+      <option>CORELLI A</option>
+      <option>APPLE</option>
+      <option>TESLA</option>
+    </select>
     <input class="field" id="inp-jmname" placeholder="Tu nombre" maxlength="20"/>
     <p class="err" id="err2"></p>
-    <button class="btn btn-teal" onclick="joinTeam()">Unirme al equipo</button>
+    <button class="btn btn-primary" onclick="joinTeam()">Unirme al equipo</button>
   </div>
 </div>
 
@@ -336,12 +329,9 @@ function handle(msg){
 
 // ─── UTILIDADES ───────────────────────────────────────────────────────────────
 function showErr(msg){
-  // Muestra el error en el campo visible
-  ["err1","err2"].forEach(id=>{
-    const el=document.getElementById(id);
-    el.textContent=msg; el.style.display="block";
-    setTimeout(()=>el.style.display="none",3500);
-  });
+  const el=document.getElementById("err2");
+  el.textContent=msg; el.style.display="block";
+  setTimeout(()=>el.style.display="none",3500);
 }
 function show(id){
   ["join","lobby","round-wrap","feedback","reveal-view","final-view"]
@@ -352,12 +342,6 @@ function hideAllRoundTypes(){
 }
 
 // ─── JOIN ─────────────────────────────────────────────────────────────────────
-function createTeam(){
-  const name=(document.getElementById("inp-tname").value||"").trim();
-  const mem=(document.getElementById("inp-mname1").value||"").trim();
-  if(!name||!mem){document.getElementById("err1").textContent="Completa ambos campos.";return;}
-  send({type:"join_team",name,memberName:mem});
-}
 function joinTeam(){
   const tname=(document.getElementById("inp-jtname").value||"").trim();
   const mname=(document.getElementById("inp-jmname").value||"").trim();
