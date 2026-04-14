@@ -18,10 +18,10 @@ body{font-family:'Inter',sans-serif;background:var(--dark);color:var(--white);mi
 .hidden{display:none!important;}
 
 /* ── JOIN / ROLE ── */
-#join{text-align:center;padding-top:32px;}
-.logo{font-size:52px;margin-bottom:14px;}
-#join h1{font-size:24px;font-weight:900;margin-bottom:6px;}
-#join p{color:var(--gray);font-size:14px;margin-bottom:26px;}
+#join{text-align:center;padding-top:28px;}
+.logo{font-size:48px;margin-bottom:10px;}
+#join h1{font-size:22px;font-weight:900;margin-bottom:4px;}
+#join>.subtitle{color:var(--gray);font-size:13px;margin-bottom:18px;}
 .card{background:var(--mid);border-radius:16px;padding:20px;margin-bottom:14px;border:2px solid transparent;transition:border-color .2s;}
 .card:hover{border-color:var(--purple);}
 .field{width:100%;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.12);border-radius:11px;
@@ -40,6 +40,27 @@ body{font-family:'Inter',sans-serif;background:var(--dark);color:var(--white);mi
 .btn-orange{background:var(--orange);color:var(--white);}
 .divider{display:flex;align-items:center;gap:10px;margin:8px 0;color:var(--gray);font-size:13px;}
 .divider::before,.divider::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.1);}
+
+/* ── TEAM MOSAIC ── */
+.mosaic-label{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  color:var(--gray);margin-bottom:12px;}
+.team-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.team-tile{background:var(--mid);border:2px solid rgba(255,255,255,.1);border-radius:14px;
+  padding:16px 10px 12px;display:flex;flex-direction:column;align-items:center;gap:6px;
+  cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
+.team-tile::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .2s;border-radius:12px;}
+.team-tile:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.25);}
+.team-tile.active{border-color:var(--tile-color,var(--purple));
+  box-shadow:0 0 18px -4px var(--tile-color,var(--purple));transform:translateY(-2px);}
+.team-tile.active::before{opacity:.12;background:var(--tile-color,var(--purple));}
+.tile-icon{font-size:34px;line-height:1;}
+.tile-name{font-size:12px;font-weight:700;letter-spacing:.5px;color:var(--white);text-align:center;
+  line-height:1.3;}
+.tile-check{width:20px;height:20px;border-radius:50%;background:var(--tile-color,var(--purple));
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;
+  position:absolute;top:8px;right:8px;opacity:0;transition:opacity .2s;}
+.team-tile.active .tile-check{opacity:1;}
+.name-section{animation:fadeIn .3s ease;}
 
 /* ── LOBBY ── */
 #lobby{text-align:center;padding-top:40px;}
@@ -174,20 +195,54 @@ body{font-family:'Inter',sans-serif;background:var(--dark);color:var(--white);mi
 <div id="join" class="screen">
   <div class="logo">🎮</div>
   <h1>Quiz de Redes Sociales</h1>
+  <p class="subtitle">Elige tu equipo para comenzar</p>
 
-  <div class="card">
-    <p style="font-size:13px;color:var(--gray);margin-bottom:12px;">Selecciona tu equipo e ingresa tu nombre</p>
-    <select class="field" id="inp-jtname">
-      <option value="" disabled selected>— Elige tu equipo —</option>
-      <option>BMW</option>
-      <option>EPIC GAMES</option>
-      <option>NAXOS</option>
-      <option>AVIANCA</option>
-      <option>LA COCINA</option>
-      <option>CORELLI A</option>
-      <option>APPLE</option>
-      <option>TESLA</option>
-    </select>
+  <div class="mosaic-label">Selecciona tu equipo</div>
+
+  <div class="team-grid">
+    <div class="team-tile" style="--tile-color:#6C3AE0" onclick="selectTeam(this,'BMW')">
+      <div class="tile-check">✓</div>
+      <div class="tile-icon">🏎️</div>
+      <div class="tile-name">BMW</div>
+    </div>
+    <div class="team-tile" style="--tile-color:#E040AB" onclick="selectTeam(this,'EPIC GAMES')">
+      <div class="tile-check">✓</div>
+      <div class="tile-icon">🎮</div>
+      <div class="tile-name">EPIC GAMES</div>
+    </div>
+    <div class="team-tile" style="--tile-color:#00C9B1" onclick="selectTeam(this,'NAXOS')">
+      <div class="tile-check">✓</div>
+      <div class="tile-icon">🎵</div>
+      <div class="tile-name">NAXOS</div>
+    </div>
+    <div class="team-tile" style="--tile-color:#FF6B35" onclick="selectTeam(this,'AVIANCA')">
+      <div class="tile-check">✓</div>
+      <div class="tile-icon">✈️</div>
+      <div class="tile-name">AVIANCA</div>
+    </div>
+    <div class="team-tile" style="--tile-color:#FFD166" onclick="selectTeam(this,'LA COCINA')">
+      <div class="tile-check">✓</div>
+      <div class="tile-icon">👨‍🍳</div>
+      <div class="tile-name">LA COCINA</div>
+    </div>
+    <div class="team-tile" style="--tile-color:#9B59B6" onclick="selectTeam(this,'CORELLI A')">
+      <div class="tile-check">✓</div>
+      <div class="tile-icon">🎻</div>
+      <div class="tile-name">CORELLI A</div>
+    </div>
+    <div class="team-tile" style="--tile-color:#7B7B9E" onclick="selectTeam(this,'APPLE')">
+      <div class="tile-check">✓</div>
+      <div class="tile-icon">🍎</div>
+      <div class="tile-name">APPLE</div>
+    </div>
+    <div class="team-tile" style="--tile-color:#E74C3C" onclick="selectTeam(this,'TESLA')">
+      <div class="tile-check">✓</div>
+      <div class="tile-icon">⚡</div>
+      <div class="tile-name">TESLA</div>
+    </div>
+  </div>
+
+  <div class="name-section" id="name-section" style="display:none;">
     <input class="field" id="inp-jmname" placeholder="Tu nombre" maxlength="20"/>
     <p class="err" id="err2"></p>
     <button class="btn btn-primary" onclick="joinTeam()">Unirme al equipo</button>
