@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>Quiz – Equipo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+  :root {
+    --purple: #6C3AE0; --pink: #E040AB; --teal: #00C9B1;
+    --orange: #FF6B35; --yellow: #FFD166; --dark: #1A1040;
+    --mid: #2D1B69; --white: #fff; --gray: #7B7B9E;
+    --green: #00C853; --red: #FF1744;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', sans-serif; background: var(--dark); color: var(--white);
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; padding: 20px 16px 40px;
+  }
+
+  .screen { width: 100%; max-width: 440px; animation: fadeIn 0.35s ease; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+  .hidden { display: none !important; }
+
+  /* ── JOIN SCREEN ── */
+  #join-screen { text-align: center; padding-top: 40px; }
+  .logo { font-size: 48px; margin-bottom: 16px; }
+  #join-screen h1 { font-size: 26px; font-weight: 900; margin-bottom: 6px; }
+  #join-screen p  { color: var(--gray); font-size: 14px; margin-bottom: 30px; }
+
+  .input-wrap { position: relative; margin-bottom: 16px; }
+  .input-wrap input {
+    width: 100%; background: var(--mid); border: 2px solid rgba(255,255,255,0.1);
+    border-radius: 14px; padding: 16px 20px; font-size: 18px; color: var(--white);
+    font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s;
+    text-align: center;
+  }
+  .input-wrap input:focus { border-color: var(--purple); }
+  .input-wrap input::placeholder { color: var(--gray); }
+
+  .error-msg { color: #FF6B6B; font-size: 13px; margin-bottom: 12px; display:none; }
+
+  /* ── ROLE BUTTONS ── */
+  .role-btns { display: flex; flex-direction: column; gap: 12px; }
+  .role-btn {
+    border: none; border-radius: 14px; padding: 16px;
+    font-size: 16px; font-weight: 700; cursor: pointer;
+    font-family: 'Inter', sans-serif; display: flex; align-items: center;
+    gap: 14px; text-align: left; transition: opacity 0.2s, transform 0.1s;
+  }
+  .role-btn:hover { opacity: 0.85; transform: scale(1.02); }
+  .role-btn .icon { font-size: 28px; }
+  .role-btn .info small { display: block; font-size: 12px; font-weight: 400; opacity: 0.75; margin-top: 2px; }
+  .btn-team { background: linear-gradient(135deg, var(--purple), var(--pink)); color: var(--white); }
+  .btn-host { background: var(--mid); color: var(--white); border: 2px solid var(--purple); }
+
+  /* ── LOBBY SCREEN (waiting for game to start) ── */
+  #lobby-screen { text-align: center; padding-top: 50px; }
+  #lobby-screen .team-name-big {
+    font-size: 32px; font-weight: 900; color: var(--yellow); margin-bottom: 8px;
+  }
+  #lobby-screen p { color: var(--gray); font-size: 15px; margin-bottom: 28px; }
+  .spinner { width: 48px; height: 48px; border: 4px solid rgba(255,255,255,0.1); border-top-color: var(--purple); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 24px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #teams-list-lobby { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 20px; }
+  .t-chip { background: var(--mid); border-radius: 999px; padding: 6px 16px; font-size: 13px; }
+  .t-chip.mine { background: var(--purple); }
+
+  /* ── QUESTION SCREEN ── */
+  #question-screen { padding-top: 10px; }
+  .q-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .q-num { font-size: 12px; font-weight: 700; letter-spacing: 2px; color: var(--purple); text-transform: uppercase; }
+  .q-points { background: var(--yellow); color: var(--dark); padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+  .q-text { font-size: 18px; font-weight: 700; line-height: 1.5; margin-bottom: 22px; }
+
+  /* Timer ring */
+  .timer-wrap { display: flex; justify-content: center; margin-bottom: 20px; }
+  .timer-ring { position: relative; width: 70px; height: 70px; }
+  .timer-ring svg { transform: rotate(-90deg); }
+  .timer-ring circle { fill: none; stroke-width: 5; }
+  .timer-ring .bg   { stroke: var(--mid); }
+  .timer-ring .prog { stroke: var(--purple); stroke-dasharray: 188; stroke-dashoffset: 0; transition: stroke-dashoffset 1s linear, stroke 0.3s; stroke-linecap: round; }
+  .timer-num { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 20px; font-weight: 900; }
+
+  /* Option buttons */
+  .opt-btn {
+    width: 100%; background: var(--mid); border: 2px solid transparent;
+    border-radius: 14px; padding: 16px 20px; font-size: 16px; font-weight: 600;
+    color: var(--white); cursor: pointer; text-align: left;
+    font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 14px;
+    margin-bottom: 12px; transition: all 0.2s;
+  }
+  .opt-btn:hover:not(:disabled) { border-color: var(--purple); background: rgba(108,58,224,0.25); }
+  .opt-btn:disabled { cursor: not-allowed; }
+  .opt-btn .ol { width: 34px; height: 34px; min-width: 34px; border-radius: 999px; font-weight: 900; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+  .opt-btn:nth-child(1) .ol { background: #E53935; }
+  .opt-btn:nth-child(2) .ol { background: #1565C0; }
+  .opt-btn:nth-child(3) .ol { background: #2E7D32; }
+  .opt-btn:nth-child(4) .ol { background: #F57F17; }
+  .opt-btn.selected { border-color: var(--purple); background: rgba(108,58,224,0.3); }
+  .opt-btn.correct  { border-color: var(--teal); background: rgba(0,201,177,0.2); }
+  .opt-btn.wrong    { opacity: 0.45; }
+
+  /* ── ANSWER FEEDBACK ── */
+  #feedback-screen { text-align: center; padding-top: 50px; }
+  .feedback-icon  { font-size: 72px; margin-bottom: 16px; }
+  .feedback-title { font-size: 26px; font-weight: 900; margin-bottom: 8px; }
+  .feedback-score { font-size: 16px; color: var(--gray); margin-bottom: 6px; }
+  .feedback-total { font-size: 22px; font-weight: 700; color: var(--yellow); }
+  .feedback-wait  { font-size: 13px; color: var(--gray); margin-top: 20px; }
+
+  /* ── REVEAL INFO (after host reveals) ── */
+  #reveal-screen { padding-top: 20px; text-align: center; }
+  .reveal-correct { color: var(--teal); font-size: 20px; font-weight: 700; margin-bottom: 10px; }
+  .reveal-expl    { background: var(--mid); border-radius: 12px; padding: 16px; font-size: 14px; line-height: 1.7; color: #d0f5f0; text-align: left; margin: 14px 0 20px; }
+  .scoreboard-title { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--purple); margin-bottom: 12px; }
+  .sb-row { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; }
+  .sb-row.mine { background: rgba(108,58,224,0.25); border: 1px solid var(--purple); }
+  .sb-rank { font-size: 18px; width: 28px; }
+  .sb-name { flex: 1; font-size: 14px; font-weight: 700; }
+  .sb-score { font-size: 14px; color: var(--teal); font-weight: 700; }
+
+  /* ── GAME OVER ── */
+  #final-screen { text-align: center; padding-top: 30px; }
+  #final-screen h2 { font-size: 30px; font-weight: 900; color: var(--yellow); margin-bottom: 6px; }
+  #final-screen p  { color: var(--gray); margin-bottom: 24px; }
+</style>
+</head>
+<body>
+
+<!-- JOIN -->
+<div id="join-screen" class="screen">
+  <div class="logo">🎮</div>
+  <h1>Quiz de Redes Sociales</h1>
+  <p>¿Eres el profe o un equipo que viene a competir?</p>
+  <div class="role-btns">
+    <button class="role-btn btn-host" onclick="goHost()">
+      <span class="icon">🖥️</span>
+      <div class="info">Panel del Profesor <small>Proyectar en el tablero</small></div>
+    </button>
+    <div class="input-wrap" style="margin-top:8px">
+      <input type="text" id="team-name-input" placeholder="Nombre del equipo" maxlength="30"
+        onkeydown="if(event.key==='Enter') joinTeam()"/>
+    </div>
+    <p id="error-msg" class="error-msg"></p>
+    <button class="role-btn btn-team" onclick="joinTeam()">
+      <span class="icon">👥</span>
+      <div class="info">Unirse como Equipo <small>Responder desde este celular</small></div>
+    </button>
+  </div>
+</div>
+
+<!-- LOBBY -->
+<div id="lobby-screen" class="screen hidden">
+  <div class="spinner"></div>
+  <div class="team-name-big" id="lobby-name"></div>
+  <p>¡Estás dentro! Espera a que el profesor inicie el juego.</p>
+  <div id="teams-list-lobby"></div>
+</div>
+
+<!-- QUESTION -->
+<div id="question-screen" class="screen hidden">
+  <div class="q-header">
+    <span class="q-num" id="q-num">Pregunta 1 de 7</span>
+    <span class="q-points" id="q-points">100 pts</span>
+  </div>
+  <div class="timer-wrap">
+    <div class="timer-ring">
+      <svg width="70" height="70" viewBox="0 0 70 70">
+        <circle class="bg" cx="35" cy="35" r="30"/>
+        <circle class="prog" id="timer-prog" cx="35" cy="35" r="30"/>
+      </svg>
+      <div class="timer-num" id="timer-num">20</div>
+    </div>
+  </div>
+  <div class="q-text" id="q-text-team"></div>
+  <div id="options-container"></div>
+</div>
+
+<!-- WAITING AFTER ANSWER -->
+<div id="feedback-screen" class="screen hidden">
+  <div class="feedback-icon" id="fb-icon"></div>
+  <div class="feedback-title" id="fb-title"></div>
+  <div class="feedback-score" id="fb-score"></div>
+  <div class="feedback-total" id="fb-total"></div>
+  <p class="feedback-wait">⏳ Esperando que respondan todos los equipos…</p>
+</div>
+
+<!-- REVEAL -->
+<div id="reveal-screen" class="screen hidden">
+  <div class="reveal-correct" id="rv-correct"></div>
+  <div class="reveal-expl" id="rv-expl"></div>
+  <div class="scoreboard-title">📊 Marcador actual</div>
+  <div id="rv-scoreboard"></div>
+  <p style="color:var(--gray);font-size:13px;text-align:center;margin-top:12px">Esperando al profesor para continuar…</p>
+</div>
+
+<!-- GAME OVER -->
+<div id="final-screen" class="screen hidden">
+  <h2>🏆 ¡Fin del juego!</h2>
+  <p>Resultados finales</p>
+  <div id="final-sb"></div>
+  <br/>
+  <button class="role-btn btn-host" onclick="location.reload()" style="margin-top:12px">
+    <span class="icon">🔄</span>
+    <div class="info">Volver al inicio</div>
+  </button>
+</div>
+
+<script>
+  // ─── ESTADO LOCAL ──────────────────────────────────────────────────────────
+  let myTeamId   = null;
+  let myTeamName = "";
+  let myScore    = 0;
+  let lastCorrect = null;
+  let timerInterval = null;
+  let timeLeft = 20;
+  let totalTime = 20;
+  const CIRCUMFERENCE = 2 * Math.PI * 30; // ~188.5
+
+  // ─── WS CONNECTION ─────────────────────────────────────────────────────────
+  const protocol = location.protocol === "https:" ? "wss" : "ws";
+  const ws = new WebSocket(`${protocol}://${location.host}`);
+
+  ws.onmessage = (e) => { handle(JSON.parse(e.data)); };
+  function send(data) { ws.send(JSON.stringify(data)); }
+
+  // ─── ROUTING: ir al host si elige esa opción ──────────────────────────────
+  function goHost() { location.href = "/host.html"; }
+
+  // ─── UNIRSE COMO EQUIPO ────────────────────────────────────────────────────
+  function joinTeam() {
+    const name = document.getElementById("team-name-input").value.trim();
+    if (!name) { showError("Escribe el nombre de tu equipo primero."); return; }
+    myTeamName = name;
+    send({ type: "join", name });
+  }
+
+  function showError(msg) {
+    const el = document.getElementById("error-msg");
+    el.textContent = msg;
+    el.style.display = "block";
+    setTimeout(() => el.style.display = "none", 3500);
+  }
+
+  // ─── MANEJADOR DE MENSAJES ─────────────────────────────────────────────────
+  function handle(msg) {
+    switch (msg.type) {
+
+      case "error":
+        showError(msg.message);
+        break;
+
+      case "joined":
+        myTeamId = msg.teamId;
+        show("lobby-screen");
+        document.getElementById("lobby-name").textContent = "👥 " + msg.name;
+        break;
+
+      case "team_joined":
+        renderLobbyTeams(msg.teams);
+        break;
+
+      case "question":
+        renderQuestion(msg);
+        break;
+
+      case "answer_received":
+        lastCorrect = msg.correct;
+        renderFeedback(msg);
+        break;
+
+      case "reveal":
+        renderReveal(msg);
+        break;
+
+      case "game_over":
+        renderFinal(msg);
+        break;
+
+      case "game_reset":
+        location.reload();
+        break;
+    }
+  }
+
+  // ─── UTILIDAD: mostrar sólo una pantalla ─────────────────────────────────
+  function show(id) {
+    ["join-screen","lobby-screen","question-screen","feedback-screen","reveal-screen","final-screen"]
+      .forEach(s => document.getElementById(s).classList.toggle("hidden", s !== id));
+  }
+
+  // ─── LOBBY ────────────────────────────────────────────────────────────────
+  function renderLobbyTeams(teams) {
+    document.getElementById("teams-list-lobby").innerHTML =
+      teams.map(t => `<span class="t-chip ${t.name === myTeamName ? 'mine' : ''}">${t.name}</span>`).join("");
+  }
+
+  // ─── PREGUNTA ─────────────────────────────────────────────────────────────
+  function renderQuestion(msg) {
+    show("question-screen");
+    document.getElementById("q-num").textContent = `Pregunta ${msg.index + 1} de ${msg.total}`;
+    document.getElementById("q-points").textContent = msg.points + " pts";
+    document.getElementById("q-text-team").textContent = msg.text;
+    totalTime = msg.timeLimit;
+
+    const letters = ["A","B","C","D"];
+    document.getElementById("options-container").innerHTML = msg.options.map((opt, i) => `
+      <button class="opt-btn" id="opt-${i}" onclick="sendAnswer(${i})">
+        <span class="ol">${letters[i]}</span>${opt}
+      </button>
+    `).join("");
+
+    startTimerRing(msg.timeLimit);
+  }
+
+  function startTimerRing(seconds) {
+    clearInterval(timerInterval);
+    timeLeft = seconds;
+    const prog = document.getElementById("timer-prog");
+    const num  = document.getElementById("timer-num");
+    prog.style.strokeDasharray = CIRCUMFERENCE;
+    prog.style.strokeDashoffset = 0;
+    prog.style.stroke = "var(--purple)";
+
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      num.textContent = Math.max(0, timeLeft);
+      const pct = timeLeft / seconds;
+      prog.style.strokeDashoffset = CIRCUMFERENCE * (1 - pct);
+      if (timeLeft <= 5)  prog.style.stroke = "var(--orange)";
+      if (timeLeft <= 0) clearInterval(timerInterval);
+    }, 1000);
+  }
+
+  function sendAnswer(index) {
+    clearInterval(timerInterval);
+    // Deshabilitar todos los botones tras responder
+    document.querySelectorAll(".opt-btn").forEach(b => b.disabled = true);
+    document.getElementById(`opt-${index}`).classList.add("selected");
+    send({ type: "answer", answer: index });
+  }
+
+  // ─── FEEDBACK (espera) ────────────────────────────────────────────────────
+  function renderFeedback(msg) {
+    show("feedback-screen");
+    myScore = msg.score;
+    if (msg.correct) {
+      document.getElementById("fb-icon").textContent  = "✅";
+      document.getElementById("fb-title").textContent = "¡Correcto!";
+      document.getElementById("fb-title").style.color = "var(--teal)";
+      document.getElementById("fb-score").textContent = `+${msg.earned} puntos`;
+    } else {
+      document.getElementById("fb-icon").textContent  = "❌";
+      document.getElementById("fb-title").textContent = "Incorrecto";
+      document.getElementById("fb-title").style.color = "var(--orange)";
+      document.getElementById("fb-score").textContent = "+0 puntos";
+    }
+    document.getElementById("fb-total").textContent = `Tu puntaje: ${msg.score} pts`;
+  }
+
+  // ─── REVEAL ───────────────────────────────────────────────────────────────
+  function renderReveal(msg) {
+    show("reveal-screen");
+    const answerLabels = ["A","B","C","D"];
+    document.getElementById("rv-correct").textContent =
+      `✔ Respuesta correcta: ${answerLabels[msg.correctIndex]}`;
+    document.getElementById("rv-expl").textContent = "💡 " + msg.explanation;
+    document.getElementById("rv-scoreboard").innerHTML = msg.scoreboard.map(t => `
+      <div class="sb-row ${t.name === myTeamName ? 'mine' : ''}">
+        <span class="sb-rank">${t.rank===1?'🥇':t.rank===2?'🥈':t.rank===3?'🥉':t.rank}</span>
+        <span class="sb-name">${t.name}${t.name===myTeamName?' (tú)':''}</span>
+        <span class="sb-score">${t.score} pts</span>
+      </div>
+    `).join("");
+  }
+
+  // ─── FINAL ────────────────────────────────────────────────────────────────
+  function renderFinal(msg) {
+    show("final-screen");
+    const medals = ["🥇","🥈","🥉"];
+    document.getElementById("final-sb").innerHTML = msg.scoreboard.map(t => `
+      <div class="sb-row ${t.name===myTeamName?'mine':''}">
+        <span class="sb-rank">${medals[t.rank-1]||t.rank}</span>
+        <span class="sb-name">${t.name}${t.name===myTeamName?' ← tú':''}</span>
+        <span class="sb-score">${t.score} pts</span>
+      </div>
+    `).join("");
+  }
+</script>
+</body>
+</html>
