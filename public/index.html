@@ -369,13 +369,19 @@ function send(d){ws.send(JSON.stringify(d));}
 
 // ─── MENSAJES ENTRANTES ────────────────────────────────────────────────────────
 function handle(msg){
+  // Si el equipo no existe aún, crearlo (primer miembro)
+  if(msg.type==="error" && msg.message.includes("no encontrado") && window._pendingJoin){
+    const {teamName,memberName}=window._pendingJoin;
+    window._pendingJoin=null;
+    send({type:"join_team",name:teamName,memberName});
+    return;
+  }
   switch(msg.type){
     case "error":         showErr(msg.message); break;
-    // El servidor usa join_member para todos en el nuevo flujo
     case "team_created":  onJoined(msg.teamId,msg.teamName,msg.memberId,msg.memberName); break;
     case "member_joined": onJoined(msg.teamId,msg.teamName,msg.memberId,msg.memberName); break;
     case "members_update":renderLobbyMembers(msg.members); break;
-    case "teams_update":  break; // el lobby no lo necesita
+    case "teams_update":  break;
     case "round_start":   renderRound(msg); break;
     case "vote_update":   renderVoteTally(msg); break;
     case "answer_received":renderFeedback(msg); break;
@@ -434,19 +440,6 @@ function joinTeam(){
   send({type:"join_member",teamName:selectedTeamName,memberName:mname});
 }
 
-// ─── MANEJO DE ERROR DE EQUIPO NO ENCONTRADO ──────────────────────────────────
-// Sobreescribimos handle para interceptar ese caso específico
-const _origHandle=handle;
-function handle(msg){
-  if(msg.type==="error" && msg.message.includes("no encontrado") && window._pendingJoin){
-    // El equipo aún no fue creado — lo creamos ahora con join_team
-    const {teamName,memberName}=window._pendingJoin;
-    window._pendingJoin=null;
-    send({type:"join_team",name:teamName,memberName});
-    return;
-  }
-  _origHandle(msg);
-}
 
 function onJoined(tid,tname,mid,mname){
   myTeamId=tid; myTeamName=tname; myMemberId=mid; myMemberName=mname;
