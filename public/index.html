@@ -197,8 +197,15 @@ body{font-family:'Inter',sans-serif;background:var(--dark);color:var(--white);mi
   <h1>Quiz de Redes Sociales</h1>
   <p class="subtitle">Elige tu equipo para comenzar</p>
 
+  <!-- Botón para el profesor -->
+  <button class="btn btn-ghost" onclick="location.href='/host.html'"
+    style="margin-bottom:18px;display:flex;align-items:center;justify-content:center;gap:10px;">
+    🖥️ Ir al Panel del Profesor
+  </button>
+
   <div class="mosaic-label">Selecciona tu equipo</div>
 
+  <!-- Mosaico de equipos — cada tile llama selectTeam() con su nombre -->
   <div class="team-grid">
     <div class="team-tile" style="--tile-color:#6C3AE0" onclick="selectTeam(this,'BMW')">
       <div class="tile-check">✓</div>
@@ -230,7 +237,7 @@ body{font-family:'Inter',sans-serif;background:var(--dark);color:var(--white);mi
       <div class="tile-icon">🎻</div>
       <div class="tile-name">CORELLI A</div>
     </div>
-    <div class="team-tile" style="--tile-color:#7B7B9E" onclick="selectTeam(this,'APPLE')">
+    <div class="team-tile" style="--tile-color:#95A5A6" onclick="selectTeam(this,'APPLE')">
       <div class="tile-check">✓</div>
       <div class="tile-icon">🍎</div>
       <div class="tile-name">APPLE</div>
@@ -242,8 +249,10 @@ body{font-family:'Inter',sans-serif;background:var(--dark);color:var(--white);mi
     </div>
   </div>
 
+  <!-- Sección de nombre — aparece al seleccionar equipo -->
   <div class="name-section" id="name-section" style="display:none;">
-    <input class="field" id="inp-jmname" placeholder="Tu nombre" maxlength="20"/>
+    <input class="field" id="inp-jmname" placeholder="Tu nombre" maxlength="20"
+      onkeydown="if(event.key==='Enter') joinTeam()"/>
     <p class="err" id="err2"></p>
     <button class="btn btn-primary" onclick="joinTeam()">Unirme al equipo</button>
   </div>
@@ -280,7 +289,6 @@ body{font-family:'Inter',sans-serif;background:var(--dark);color:var(--white);mi
   <!-- MCQ / VOTE -->
   <div id="mcq-wrap" class="hidden">
     <div id="mcq-opts"></div>
-    <!-- Tally de votos (solo visible en tipo vote después de votar) -->
     <div class="vote-tally hidden" id="vote-tally">
       <div class="tally-title">Votos de tu equipo en tiempo real</div>
       <div id="tally-bars"></div>
@@ -318,7 +326,7 @@ body{font-family:'Inter',sans-serif;background:var(--dark);color:var(--white);mi
   </div>
 </div>
 
-<!-- ── FEEDBACK (esperando al resto) ── -->
+<!-- ── FEEDBACK ── -->
 <div id="feedback" class="screen hidden">
   <div class="fb-icon" id="fb-icon"></div>
   <div class="fb-title" id="fb-title"></div>
@@ -349,14 +357,14 @@ body{font-family:'Inter',sans-serif;background:var(--dark);color:var(--white);mi
 // ─── ESTADO ───────────────────────────────────────────────────────────────────
 let myTeamId=null, myTeamName="", myMemberId=null, myMemberName="";
 let myScore=0, currentRound=null, timerIv=null;
-const CIRC=2*Math.PI*30; // ≈188.5
+let selectedTeamName=null;   // equipo seleccionado en el mosaico
+const CIRC=2*Math.PI*30;
 
-// Drag & drop state
+// Drag & drop
 let dragSrc=null;
-// Match state
-let matchLeft=null;      // índice de left seleccionado
-let matchAnswers={};     // { leftIdx: rightIdx }
-// Strategy state
+// Match
+let matchLeft=null, matchAnswers={};
+// Strategy
 let stratAnswers=[];
 
 // ─── WS ───────────────────────────────────────────────────────────────────────
@@ -365,44 +373,87 @@ const ws=new WebSocket(`${proto}://${location.host}`);
 ws.onmessage=e=>handle(JSON.parse(e.data));
 function send(d){ws.send(JSON.stringify(d));}
 
-// ─── HANDLE ───────────────────────────────────────────────────────────────────
+// ─── MENSAJES ENTRANTES ────────────────────────────────────────────────────────
 function handle(msg){
   switch(msg.type){
-    case "error":        showErr(msg.message); break;
-    case "team_created": onJoined(msg.teamId,msg.teamName,msg.memberId,msg.memberName); break;
-    case "member_joined":onJoined(msg.teamId,msg.teamName,msg.memberId,msg.memberName); break;
+    case "error":         showErr(msg.message); break;
+    // El servidor usa join_member para todos en el nuevo flujo
+    case "team_created":  onJoined(msg.teamId,msg.teamName,msg.memberId,msg.memberName); break;
+    case "member_joined": onJoined(msg.teamId,msg.teamName,msg.memberId,msg.memberName); break;
     case "members_update":renderLobbyMembers(msg.members); break;
-    case "teams_update": /* lobby no necesita esto */ break;
-    case "round_start":  renderRound(msg); break;
-    case "vote_update":  renderVoteTally(msg); break;
-    case "answer_received": renderFeedback(msg); break;
-    case "reveal":       renderReveal(msg); break;
-    case "game_over":    renderFinal(msg); break;
-    case "game_reset":   location.reload(); break;
+    case "teams_update":  break; // el lobby no lo necesita
+    case "round_start":   renderRound(msg); break;
+    case "vote_update":   renderVoteTally(msg); break;
+    case "answer_received":renderFeedback(msg); break;
+    case "reveal":        renderReveal(msg); break;
+    case "game_over":     renderFinal(msg); break;
+    case "game_reset":    location.reload(); break;
   }
 }
 
 // ─── UTILIDADES ───────────────────────────────────────────────────────────────
 function showErr(msg){
   const el=document.getElementById("err2");
-  el.textContent=msg; el.style.display="block";
-  setTimeout(()=>el.style.display="none",3500);
+  el.textContent=msg;
+  setTimeout(()=>{el.textContent="";},3500);
 }
 function show(id){
   ["join","lobby","round-wrap","feedback","reveal-view","final-view"]
     .forEach(s=>document.getElementById(s).classList.toggle("hidden",s!==id));
 }
 function hideAllRoundTypes(){
-  ["mcq-wrap","sort-wrap","match-wrap","strat-wrap"].forEach(id=>document.getElementById(id).classList.add("hidden"));
+  ["mcq-wrap","sort-wrap","match-wrap","strat-wrap"]
+    .forEach(id=>document.getElementById(id).classList.add("hidden"));
 }
 
-// ─── JOIN ─────────────────────────────────────────────────────────────────────
-function joinTeam(){
-  const tname=(document.getElementById("inp-jtname").value||"").trim();
-  const mname=(document.getElementById("inp-jmname").value||"").trim();
-  if(!tname||!mname){document.getElementById("err2").textContent="Completa ambos campos.";return;}
-  send({type:"join_member",teamName:tname,memberName:mname});
+// ─── SELECCIÓN DE EQUIPO EN EL MOSAICO ────────────────────────────────────────
+// Al tocar un tile: lo marca visualmente y revela el campo de nombre
+function selectTeam(tile, teamName){
+  document.querySelectorAll(".team-tile").forEach(t=>t.classList.remove("active"));
+  tile.classList.add("active");
+  selectedTeamName=teamName;
+  const section=document.getElementById("name-section");
+  section.style.display="block";
+  // Scroll suave hacia el campo
+  setTimeout(()=>section.scrollIntoView({behavior:"smooth",block:"nearest"}),100);
+  document.getElementById("inp-jmname").focus();
 }
+
+// ─── UNIRSE AL EQUIPO ─────────────────────────────────────────────────────────
+// Usa join_member (el equipo ya existe en el servidor, creado automáticamente la
+// primera vez que alguien con ese nombre se une — el servidor lo maneja)
+function joinTeam(){
+  if(!selectedTeamName){
+    showErr("Primero selecciona tu equipo en el mosaico.");
+    return;
+  }
+  const mname=(document.getElementById("inp-jmname").value||"").trim();
+  if(!mname){
+    showErr("Escribe tu nombre.");
+    return;
+  }
+  // Intentamos join_member. Si el equipo no existe aún en el servidor,
+  // el servidor responderá con error "Equipo no encontrado", y entonces
+  // intentamos join_team para crearlo (primer miembro del equipo).
+  // Guardamos el intento para poder re-intentar como join_team si falla.
+  window._pendingJoin={teamName:selectedTeamName,memberName:mname};
+  send({type:"join_member",teamName:selectedTeamName,memberName:mname});
+}
+
+// ─── MANEJO DE ERROR DE EQUIPO NO ENCONTRADO ──────────────────────────────────
+// Sobreescribimos handle para interceptar ese caso específico
+const _origHandle=handle;
+function handle(msg){
+  if(msg.type==="error" && msg.message.includes("no encontrado") && window._pendingJoin){
+    // El equipo aún no fue creado — lo creamos ahora con join_team
+    const {teamName,memberName}=window._pendingJoin;
+    window._pendingJoin=null;
+    send({type:"join_team",name:teamName,memberName});
+    return;
+  }
+  _origHandle(msg);
+}
+
 function onJoined(tid,tname,mid,mname){
   myTeamId=tid; myTeamName=tname; myMemberId=mid; myMemberName=mname;
   document.getElementById("lob-tname").textContent="👥 "+tname;
@@ -419,7 +470,9 @@ function startTimerRing(secs){
   clearInterval(timerIv);
   const prog=document.getElementById("tprog"), num=document.getElementById("tnum");
   let t=secs;
-  prog.style.strokeDasharray=CIRC; prog.style.strokeDashoffset=0; prog.style.stroke="var(--purple)";
+  prog.style.strokeDasharray=CIRC;
+  prog.style.strokeDashoffset=0;
+  prog.style.stroke="var(--purple)";
   timerIv=setInterval(()=>{
     t--;
     num.textContent=Math.max(0,t);
@@ -443,8 +496,8 @@ function renderRound(msg){
   startTimerRing(r.timeLimit);
 
   if(r.type==="mcq"||r.type==="vote") renderMcq(r);
-  else if(r.type==="sort") renderSort(r);
-  else if(r.type==="match") renderMatch(r);
+  else if(r.type==="sort")     renderSort(r);
+  else if(r.type==="match")    renderMatch(r);
   else if(r.type==="strategy") renderStrategy(r);
 }
 
@@ -458,15 +511,12 @@ function renderMcq(r){
     </button>`).join("");
 }
 function pickMcq(idx,btn,type){
-  // Deshabilitar todos
   document.querySelectorAll(".opt-btn").forEach(b=>b.disabled=true);
   btn.classList.add("sel");
   if(type==="vote"){
-    // Mostrar tally, no enviar aún — el servidor calcula consenso
     document.getElementById("vote-tally").classList.remove("hidden");
     send({type:"cast_vote",option:idx});
   } else {
-    // MCQ clásico: enviar inmediatamente
     send({type:"submit_answer",answer:idx});
   }
 }
@@ -474,45 +524,40 @@ function renderVoteTally(msg){
   const r=currentRound;
   if(!r||r.type!=="vote") return;
   const total=msg.total, voted=msg.voted;
-  const bars=r.options.map((opt,i)=>{
+  document.getElementById("tally-bars").innerHTML=r.options.map((opt,i)=>{
     const cnt=msg.tally[String(i)]||0;
     const pct=total?Math.round(cnt/total*100):0;
     return `<div class="tally-row">
-      <div class="tally-label"><span>${opt.slice(0,40)}${opt.length>40?'…':''}</span><span>${cnt} voto${cnt!==1?'s':''}</span></div>
+      <div class="tally-label">
+        <span>${opt.slice(0,40)}${opt.length>40?'…':''}</span>
+        <span>${cnt} voto${cnt!==1?'s':''}</span>
+      </div>
       <div class="tally-bg"><div class="tally-fill" style="width:${pct}%"></div></div>
     </div>`;
   }).join("");
-  document.getElementById("tally-bars").innerHTML=bars;
   document.getElementById("voted-count").textContent=`${voted} de ${total} miembros han votado`;
-  if(msg.voted===msg.total){
+  if(msg.voted===msg.total)
     document.getElementById("consensus-msg").classList.remove("hidden");
-  }
 }
 
 // ── SORT (drag & drop) ─────────────────────────────────────────────────────────
-// Mantenemos el orden actual como array de { originalIdx, text }
 let sortOrder=[];
 function renderSort(r){
   document.getElementById("sort-wrap").classList.remove("hidden");
-  // Mezclar aleatoriamente
   sortOrder=r.items.map((text,i)=>({idx:i,text})).sort(()=>Math.random()-.5);
   renderSortList();
 }
 function renderSortList(){
-  const list=document.getElementById("sort-list");
-  list.innerHTML=sortOrder.map((item,pos)=>`
+  document.getElementById("sort-list").innerHTML=sortOrder.map((item,pos)=>`
     <div class="sort-card" id="sc-${pos}" draggable="true"
-      ondragstart="dragStart(event,${pos})" ondragover="dragOver(event,${pos})"
-      ondragend="dragEnd()"
-      ontouchstart="touchStart(event,${pos})" ontouchmove="touchMove(event)"
-      ontouchend="touchEnd(event,${pos})">
+      ondragstart="dragStart(event,${pos})" ondragover="dragOver(event,${pos})" ondragend="dragEnd()"
+      ontouchstart="touchStart(event,${pos})" ontouchmove="touchMove(event)" ontouchend="touchEnd(event,${pos})">
       <span class="drag-handle">☰</span>
       <span class="sort-pos">${pos+1}</span>
       <span>${item.text}</span>
     </div>`).join("");
 }
-
-// Desktop drag & drop
+// Desktop D&D
 function dragStart(e,pos){dragSrc=pos;e.currentTarget.classList.add("dragging");}
 function dragOver(e,pos){
   e.preventDefault();
@@ -535,39 +580,34 @@ document.addEventListener("drop",e=>{
   dragSrc=null;
   renderSortList();
 });
-
-// Touch drag & drop (mobile)
+// Touch D&D (mobile)
 let touchSrcPos=null, touchClone=null;
 function touchStart(e,pos){
   touchSrcPos=pos;
   const card=e.currentTarget;
-  // Crear clon visual
   touchClone=card.cloneNode(true);
   touchClone.style.cssText=`position:fixed;opacity:.75;pointer-events:none;z-index:9999;
     width:${card.offsetWidth}px;border:2px solid var(--purple);border-radius:11px;`;
   document.body.appendChild(touchClone);
   moveTouchClone(e.touches[0]);
 }
-function moveTouchClone(touch){
+function moveTouchClone(t){
   if(!touchClone) return;
-  touchClone.style.left=(touch.clientX-touchClone.offsetWidth/2)+"px";
-  touchClone.style.top=(touch.clientY-40)+"px";
+  touchClone.style.left=(t.clientX-touchClone.offsetWidth/2)+"px";
+  touchClone.style.top=(t.clientY-40)+"px";
 }
 function touchMove(e){
   e.preventDefault();
   moveTouchClone(e.touches[0]);
-  // Highlight the card under finger
-  const touch=e.touches[0];
   document.querySelectorAll(".sort-card").forEach(c=>c.classList.remove("drag-over"));
-  const el=document.elementFromPoint(touch.clientX,touch.clientY);
-  el?.closest(".sort-card")?.classList.add("drag-over");
+  document.elementFromPoint(e.touches[0].clientX,e.touches[0].clientY)
+    ?.closest(".sort-card")?.classList.add("drag-over");
 }
 function touchEnd(e){
   if(touchClone){touchClone.remove();touchClone=null;}
   const touch=e.changedTouches[0];
   document.querySelectorAll(".sort-card").forEach(c=>c.classList.remove("drag-over","dragging"));
-  const el=document.elementFromPoint(touch.clientX,touch.clientY);
-  const target=el?.closest(".sort-card");
+  const target=document.elementFromPoint(touch.clientX,touch.clientY)?.closest(".sort-card");
   if(target&&touchSrcPos!==null){
     const toPos=parseInt(target.id.replace("sc-",""));
     if(touchSrcPos!==toPos){
@@ -580,8 +620,7 @@ function touchEnd(e){
 }
 function submitSort(){
   clearInterval(timerIv);
-  const answer=sortOrder.map(item=>item.idx);
-  send({type:"submit_answer",answer});
+  send({type:"submit_answer",answer:sortOrder.map(item=>item.idx)});
   document.getElementById("sort-submit").disabled=true;
 }
 
@@ -589,11 +628,8 @@ function submitSort(){
 function renderMatch(r){
   document.getElementById("match-wrap").classList.remove("hidden");
   matchLeft=null; matchAnswers={};
-  // Mezclar el lado derecho para que no coincidan en orden
   const rightShuffled=r.pairs.map((p,i)=>({text:p.right,origIdx:i})).sort(()=>Math.random()-.5);
-  // Guardamos el mapeo: posiciónVisual → índice original
   window._matchRightOrder=rightShuffled;
-
   document.getElementById("match-left").innerHTML=r.pairs.map((p,i)=>`
     <div class="match-item" id="ml-${i}" onclick="selectLeft(${i})">${p.left}</div>`).join("");
   document.getElementById("match-right").innerHTML=rightShuffled.map((item,vi)=>`
@@ -602,31 +638,24 @@ function renderMatch(r){
     <div class="match-conn-line" id="mline-${i}"></div>`).join("");
 }
 function selectLeft(idx){
-  // Deselect si ya estaba seleccionado
   document.querySelectorAll(".match-item").forEach(el=>el.classList.remove("selected"));
-  // Si ya tenía conexión, no permitir re-selección
   if(matchAnswers[String(idx)]!==undefined) return;
   matchLeft=idx;
   document.getElementById(`ml-${idx}`).classList.add("selected");
 }
 function selectRight(visualIdx,origIdx){
   if(matchLeft===null) return;
-  // Verificar que el right no esté ya conectado
-  const alreadyUsed=Object.values(matchAnswers).includes(origIdx);
-  if(alreadyUsed){
-    // Feedback visual: ya está usado
+  if(Object.values(matchAnswers).includes(origIdx)){
     document.getElementById(`mr-${visualIdx}`).classList.add("wrong-match");
     setTimeout(()=>document.getElementById(`mr-${visualIdx}`)?.classList.remove("wrong-match"),800);
     return;
   }
-  // Guardar: left origIdx → right origIdx
   matchAnswers[String(matchLeft)]=origIdx;
   document.getElementById(`ml-${matchLeft}`).classList.remove("selected");
   document.getElementById(`ml-${matchLeft}`).classList.add("connected-l");
   document.getElementById(`mr-${visualIdx}`).classList.add("connected-r");
   document.getElementById(`mline-${matchLeft}`).classList.add("active");
   matchLeft=null;
-  // Habilitar submit si todos conectados
   if(Object.keys(matchAnswers).length===window._matchRightOrder.length)
     document.getElementById("match-submit").disabled=false;
 }
@@ -654,12 +683,10 @@ function renderStrategy(r){
     </div>`).join("");
 }
 function pickStrat(bi,oi,btn){
-  // Seleccionar opción en este bloque
   document.querySelectorAll(`#strat-blocks .strat-block:nth-child(${bi+1}) .strat-opt`)
-    .forEach(b=>{b.classList.remove("sel");b.disabled=false;});
+    .forEach(b=>{b.classList.remove("sel");});
   btn.classList.add("sel");
   stratAnswers[bi]=oi;
-  // Actualizar submit
   if(stratAnswers.every(v=>v!==null))
     document.getElementById("strat-submit").disabled=false;
 }
@@ -676,9 +703,9 @@ function renderFeedback(msg){
   show("feedback");
   if(msg.correct){
     document.getElementById("fb-icon").textContent="✅";
-    document.getElementById("fb-title").textContent= msg.consensus?"¡Consenso! Equipo acertó":"¡Correcto!";
+    document.getElementById("fb-title").textContent=msg.consensus?"¡Consenso! Equipo acertó":"¡Correcto!";
     document.getElementById("fb-title").style.color="var(--teal)";
-    document.getElementById("fb-pts").textContent=`+${msg.earned} puntos${msg.earned>currentRound?.points?" (incluye bonus de velocidad)":""}`;
+    document.getElementById("fb-pts").textContent=`+${msg.earned} puntos`;
   } else {
     document.getElementById("fb-icon").textContent="❌";
     document.getElementById("fb-title").textContent="Incorrecto";
@@ -692,15 +719,14 @@ function renderFeedback(msg){
 function renderReveal(msg){
   show("reveal-view");
   const r=msg.round;
-  // Construir mensaje de respuesta correcta
   let correctMsg="";
   if(r.type==="mcq"||r.type==="vote"){
-    const letters=["A","B","C","D"];
-    correctMsg=`✔ Respuesta correcta: ${letters[r.correct]} — ${r.options[r.correct]}`;
+    const L=["A","B","C","D"];
+    correctMsg=`✔ Respuesta correcta: ${L[r.correct]} — ${r.options[r.correct]}`;
   } else if(r.type==="sort"){
     correctMsg=`✔ Orden correcto: ${r.correctOrder.map((i,p)=>`${p+1}. ${r.items[i]}`).join(" → ")}`;
   } else if(r.type==="match"){
-    correctMsg=`✔ Todas las conexiones: ${r.pairs.map(p=>`${p.left} ↔ ${p.right}`).join(", ")}`;
+    correctMsg=`✔ Conexiones: ${r.pairs.map(p=>`${p.left} ↔ ${p.right}`).join(", ")}`;
   } else if(r.type==="strategy"){
     correctMsg=`✔ Estrategia óptima: ${r.blocks.map(b=>`${b.label}: ${b.options[b.correct]}`).join(" | ")}`;
   }
